@@ -13,5 +13,6 @@ soup = BeautifulSoup(response.text, "html.parser")
 # Extraemos títulos de noticias
 for noticia in soup.find_all("h2", "story-card-hl"):
     print("Título:", noticia.get_text())
-    #print("Enlace:", noticia["href"])
+    enlace = noticia.find_parent("a")
+    print("Enlace:", enlace["href"])
     print("=" * 50)
