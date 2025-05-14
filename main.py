@@ -1,4 +1,5 @@
 import requests
+import json
 from pagina import Pagina
 from bs4 import BeautifulSoup
 
@@ -7,6 +8,9 @@ from bs4 import BeautifulSoup
 # DEPURACION
 # Si DEBUG es True, se imprimen mensajes de depuración
 DEBUG = False
+
+# Data to be written
+list_to_json = []
 
 def MsgDg(msg: str):
     """Imprime un mensaje de depuración si DEBUG es True."""
@@ -34,14 +38,12 @@ for noticia in soup.find_all("h2", "story-card-hl"):
     enlace = noticia.find_parent("a")
     paginas.append(Pagina(noticia.get_text(), enlace["href"]))
 
+# Guardar las paginas iniciales para analizarlas al ultimo
+paginas_iniciales = list(paginas)
+
 # Para evitar recorrer una pagina dos veces, se crea otra lista
 # que aloja las paginas que ya fueron recorridas
 paginas_recorridas = []
-
-# Imprimimos los títulos y enlaces
-for pagina in paginas:
-    print(pagina)
-    print("=" * 50)
 
 # Se arman las capas
 while True:
@@ -59,6 +61,7 @@ while True:
             MsgDg(f"{"*"*15}Ignorando por ya recorrida{pagina.Titulo}...{"*"*15}")
             continue
         
+        print(f"{"*"*15}Leyendo {pagina.Titulo}...{"*"*15}")
         response = requests.get(f"{pagina_base}{pagina.Href}")
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -69,9 +72,11 @@ while True:
 
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
-                MsgDg(f"{"*"*15}Ignorando por no ser de deportes{pagina.Titulo}...{"*"*15}")
+                MsgDg(f"{"*"*15}Ignorando por no ser de deportes{nueva_pagina.Titulo}...{"*"*15}")
                 continue
 
+            MsgDg(f"{"*"*15}Guardando {nueva_pagina.Titulo}...{"*"*15}")
+            
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
             contador += 1
@@ -83,8 +88,10 @@ while True:
 
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
-                MsgDg(f"{"*"*15}Ignorando por no ser de deportes{pagina.Titulo}...{"*"*15}")
+                MsgDg(f"{"*"*15}Ignorando por no ser de deportes{nueva_pagina.Titulo}...{"*"*15}")
                 continue
+
+            MsgDg(f"{"*"*15}Guardando {nueva_pagina.Titulo}...{"*"*15}")
 
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
@@ -92,14 +99,23 @@ while True:
 
         paginas_recorridas.append(pagina)
 
-        # Imprimimos los títulos y enlaces
-        for pagina_sec in pagina.paginas:
-            print(pagina_sec)
-            print("=" * 50)
+        list_to_json.append(pagina.ToJson())
     
     # Se pone la nueva lista a usar
     paginas = nuevas_paginas
 
     if contador == 0:
-        print("No se encontraron más páginas.")
+        MsgDg("No se encontraron más páginas.")
         break
+
+for x in range(len(paginas_recorridas)):
+    print(f"{x+1} - {paginas_recorridas[x].Titulo}")
+    print(paginas_recorridas[x].Href)
+    print("=" * 50)
+ 
+# Serializing json
+json_object = json.dumps(list_to_json, indent=4, ensure_ascii=False)
+ 
+# Writing to sample.json
+with open("sample.json", "w", encoding="utf-8") as outfile:
+    outfile.write(json_object)

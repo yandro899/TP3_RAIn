@@ -46,3 +46,11 @@ class Pagina:
     def Paginas(self, paginas: list):
         """Establece la lista de páginas."""
         self.paginas = paginas
+
+    def ToJson(self) -> dict:
+        """Devuelve un diccionario con los datos de la página."""
+        return {
+            "titulo": self.titulo,
+            "href": self.href,
+            "paginas": [pagina.ToJson() for pagina in self.paginas]
+        }
