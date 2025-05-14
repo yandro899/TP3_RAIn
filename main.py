@@ -36,7 +36,7 @@ for noticia in soup.find_all("h2", "story-card-hl"):
 
 # Para evitar recorrer una pagina dos veces, se crea otra lista
 # que aloja las paginas que ya fueron recorridas
-paginas_recorridas = paginas.copy()
+paginas_recorridas = []
 
 # Imprimimos los títulos y enlaces
 for pagina in paginas:
@@ -54,6 +54,11 @@ while True:
 
     for pagina in paginas:
 
+        # Si la pagina ya fue recorrida, no se vuelve a recorrer
+        if pagina in paginas_recorridas:
+            MsgDg(f"{"*"*15}Ignorando por ya recorrida{pagina.Titulo}...{"*"*15}")
+            continue
+        
         response = requests.get(f"{pagina_base}{pagina.Href}")
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -62,11 +67,6 @@ while True:
             enlace = noticia.find_parent("a")
             nueva_pagina = Pagina(noticia.get_text(), enlace["href"])
 
-            # Si la pagina ya fue recorrida, no se agrega
-            if nueva_pagina in paginas_recorridas:
-                MsgDg(f"{"*"*15}Ignorando por estar explorada{pagina.Titulo}...{"*"*15}")
-                continue
-
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
                 MsgDg(f"{"*"*15}Ignorando por no ser de deportes{pagina.Titulo}...{"*"*15}")
@@ -74,7 +74,6 @@ while True:
 
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
-            paginas_recorridas.append(nueva_pagina)
             contador += 1
 
         # Luego por ultimas noticias
@@ -82,11 +81,6 @@ while True:
             enlace = noticia.find_parent("div").find_parent("a")
             nueva_pagina = Pagina(noticia.get_text(), enlace["href"])
 
-            # Si la pagina ya fue recorrida, no se agrega
-            if nueva_pagina in paginas_recorridas:
-                MsgDg(f"{"*"*15}Ignorando por estar explorada{pagina.Titulo}...{"*"*15}")
-                continue
-
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
                 MsgDg(f"{"*"*15}Ignorando por no ser de deportes{pagina.Titulo}...{"*"*15}")
@@ -94,8 +88,9 @@ while True:
 
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
-            paginas_recorridas.append(nueva_pagina)
             contador += 1
+
+        paginas_recorridas.append(pagina)
 
         # Imprimimos los títulos y enlaces
         for pagina_sec in pagina.paginas:
