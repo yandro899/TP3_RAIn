@@ -46,7 +46,7 @@ paginas_iniciales = list(paginas)
 paginas_recorridas = []
 
 # Se arman las capas
-while True:
+for x in range(6):
 
     # Se almacenan las paginas recien encontradas
     nuevas_paginas = []
@@ -56,14 +56,25 @@ while True:
 
     for pagina in paginas:
 
+        response = requests.get(f"{pagina_base}{pagina.Href}")
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        if pagina.Titulo == "":
+            # Si no tiene titulo, se busca el primero
+            # que tenga un h1
+            h1 = soup.find("h1")
+            if h1 is not None:
+                pagina.Titulo = h1.get_text()
+            else:
+                MsgDg(f"{"*"*15}No se encontro titulo para {pagina.Href}...{"*"*15}")
+                continue
+
         # Si la pagina ya fue recorrida, no se vuelve a recorrer
         if pagina in paginas_recorridas:
             MsgDg(f"{"*"*15}Ignorando por ya recorrida{pagina.Titulo}...{"*"*15}")
             continue
-        
+
         print(f"{"*"*15}Leyendo {pagina.Titulo}...{"*"*15}")
-        response = requests.get(f"{pagina_base}{pagina.Href}")
-        soup = BeautifulSoup(response.text, "html.parser")
 
         # Primero por los recomendados
         for noticia in soup.find_all("h2", "most-read-card-headline"):
@@ -85,6 +96,26 @@ while True:
         for noticia in soup.find_all("h2", "feed-list-card-headline-lean"):
             enlace = noticia.find_parent("div").find_parent("a")
             nueva_pagina = Pagina(noticia.get_text(), enlace["href"])
+
+            # Si la noticia no es de deportes, no se agrega
+            if not es_deportes(nueva_pagina.Href):
+                MsgDg(f"{"*"*15}Ignorando por no ser de deportes{nueva_pagina.Titulo}...{"*"*15}")
+                continue
+
+            MsgDg(f"{"*"*15}Guardando {nueva_pagina.Titulo}...{"*"*15}")
+
+            pagina.Paginas.append(nueva_pagina)
+            nuevas_paginas.append(nueva_pagina)
+            contador += 1
+
+        # Analizar los enlaces en negrita
+        for noticia in soup.find_all("b"):
+            enlace = noticia.find_parent("a")
+            if enlace is None:
+                continue
+            nuevo_enlace = enlace["href"].replace(pagina_base,"")
+            nueva_pagina = Pagina("", nuevo_enlace)
+            
 
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
