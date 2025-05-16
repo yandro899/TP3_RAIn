@@ -2,6 +2,8 @@ import requests
 import json
 from pagina import Pagina
 from bs4 import BeautifulSoup
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # pip install beautifulsoup4
 
@@ -11,6 +13,9 @@ DEBUG = False
 
 # Data to be written
 list_to_json = []
+
+# Guardar lista de tuplas de paginas conectadas
+conexiones = []
 
 def MsgDg(msg: str):
     """Imprime un mensaje de depuración si DEBUG es True."""
@@ -64,7 +69,7 @@ for x in range(6):
             # que tenga un h1
             h1 = soup.find("h1")
             if h1 is not None:
-                pagina.Titulo = h1.get_text()
+                pagina.Titulo = h1.get_text().strip()
             else:
                 MsgDg(f"{"*"*15}No se encontro titulo para {pagina.Href}...{"*"*15}")
                 continue
@@ -79,7 +84,7 @@ for x in range(6):
         # Primero por los recomendados
         for noticia in soup.find_all("h2", "most-read-card-headline"):
             enlace = noticia.find_parent("a")
-            nueva_pagina = Pagina(noticia.get_text(), enlace["href"])
+            nueva_pagina = Pagina(noticia.get_text().strip(), enlace["href"])
 
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
@@ -90,12 +95,13 @@ for x in range(6):
             
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
+            conexiones.append((pagina.Titulo, nueva_pagina.Titulo))
             contador += 1
 
         # Luego por ultimas noticias
         for noticia in soup.find_all("h2", "feed-list-card-headline-lean"):
             enlace = noticia.find_parent("div").find_parent("a")
-            nueva_pagina = Pagina(noticia.get_text(), enlace["href"])
+            nueva_pagina = Pagina(noticia.get_text().strip(), enlace["href"])
 
             # Si la noticia no es de deportes, no se agrega
             if not es_deportes(nueva_pagina.Href):
@@ -106,6 +112,7 @@ for x in range(6):
 
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
+            conexiones.append((pagina.Titulo, nueva_pagina.Titulo))
             contador += 1
 
         # Analizar los enlaces en negrita
@@ -126,6 +133,7 @@ for x in range(6):
 
             pagina.Paginas.append(nueva_pagina)
             nuevas_paginas.append(nueva_pagina)
+            conexiones.append((pagina.Titulo, nueva_pagina.Titulo))
             contador += 1
 
         paginas_recorridas.append(pagina)
@@ -143,6 +151,37 @@ for x in range(len(paginas_recorridas)):
     print(f"{x+1} - {paginas_recorridas[x].Titulo}")
     print(paginas_recorridas[x].Href)
     print("=" * 50)
+
+# Reemplazar los titulos en los enlaces por numeros para
+# simplificar el grafo
+for x in range(len(paginas_recorridas)):
+    # Por cada pagina recorrida, se reemplaza este nombre en todas las tuplas
+    for y in range(len(conexiones)):
+        if conexiones[y][0] == paginas_recorridas[x].Titulo:
+            conexiones[y] = (x+1, conexiones[y][1])
+        if conexiones[y][1] == paginas_recorridas[x].Titulo:
+            conexiones[y] = (conexiones[y][0], x+1)
+
+# Crear un grafo dirigido
+G = nx.DiGraph()
+
+# Agregar nodos
+G.add_nodes_from([x for x in range(1, len(paginas_recorridas)+1)])
+
+# Agregar aristas dirigidas (incluyendo conexiones bidireccionales)
+for x in range(len(conexiones)):
+    
+    # Solamente se usa los nodos que son enteros, o sea que fueron explorados.
+    if isinstance(conexiones[x][0], str) or isinstance(conexiones[x][1], str):
+        continue
+
+    G.add_edge(conexiones[x][0], conexiones[x][1])  # Conexión de 1 -> 2
+
+pos = nx.spring_layout(G, k=1) 
+
+plt.figure(figsize=(8, 8))
+nx.draw(G, pos, with_labels=True, node_color="lightblue", edge_color="gray", font_weight="bold")
+plt.show()
  
 # Serializing json
 json_object = json.dumps(list_to_json, indent=4, ensure_ascii=False)
