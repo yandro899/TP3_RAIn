@@ -4,6 +4,7 @@ from pagina import Pagina
 from bs4 import BeautifulSoup
 import networkx as nx
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # pip install beautifulsoup4
 
@@ -147,10 +148,18 @@ for x in range(6):
         MsgDg("No se encontraron más páginas.")
         break
 
+labels = {"Id" : [], "Label": []}
+
 for x in range(len(paginas_recorridas)):
     print(f"{x+1} - {paginas_recorridas[x].Titulo}")
     print(paginas_recorridas[x].Href)
     print("=" * 50)
+
+    # Agregar estas definiciones a un csv de labels
+    labels["Id"].append(x+1)
+    labels["Label"].append(paginas_recorridas[x].Titulo)
+
+pd.DataFrame(labels).to_excel("labels.xlsx", index=False)
 
 # Reemplazar los titulos en los enlaces por numeros para
 # simplificar el grafo
@@ -168,6 +177,8 @@ G = nx.DiGraph()
 # Agregar nodos
 G.add_nodes_from([x for x in range(1, len(paginas_recorridas)+1)])
 
+edges = {"Source": [], "Target": [], "Weight": []}
+
 # Agregar aristas dirigidas (incluyendo conexiones bidireccionales)
 for x in range(len(conexiones)):
     
@@ -177,6 +188,12 @@ for x in range(len(conexiones)):
 
     G.add_edge(conexiones[x][0], conexiones[x][1])  # Conexión de 1 -> 2
 
+    # Agregar estas aristas a un csv de aristas
+    edges["Source"].append(conexiones[x][0])
+    edges["Target"].append(conexiones[x][1])
+    edges["Weight"].append(1)
+
+pd.DataFrame(edges).to_excel("edges.xlsx", index=False)
 pos = nx.spring_layout(G, k=1) 
 
 plt.figure(figsize=(8, 8))
