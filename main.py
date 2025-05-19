@@ -12,9 +12,6 @@ import pandas as pd
 # Si DEBUG es True, se imprimen mensajes de depuración
 DEBUG = False
 
-# Data to be written
-list_to_json = []
-
 # Guardar lista de tuplas de paginas conectadas
 conexiones = []
 
@@ -138,8 +135,6 @@ for x in range(6):
             contador += 1
 
         paginas_recorridas.append(pagina)
-
-        list_to_json.append(pagina.ToJson())
     
     # Se pone la nueva lista a usar
     paginas = nuevas_paginas
@@ -199,10 +194,3 @@ pos = nx.spring_layout(G, k=1)
 plt.figure(figsize=(8, 8))
 nx.draw(G, pos, with_labels=True, node_color="lightblue", edge_color="gray", font_weight="bold")
 plt.show()
- 
-# Serializing json
-json_object = json.dumps(list_to_json, indent=4, ensure_ascii=False)
- 
-# Writing to sample.json
-with open("sample.json", "w", encoding="utf-8") as outfile:
-    outfile.write(json_object)
